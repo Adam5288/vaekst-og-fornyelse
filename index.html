@@ -1,0 +1,529 @@
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --card2:#eef1f5; --ink:#182029; --muted:#5b6774;
+    --line:#dde3ea; --accent:#0f766e; --accent-ink:#ffffff;
+    --prot:#d1495b; --carb:#d9962f; --fat:#6a7fc4;
+    --good:#3f8f45; --warn:#c1852a; --over:#c0453b;
+    --readout:#0d5c55;
+    --radius:14px; --shadow:0 1px 2px rgba(20,30,45,.06),0 6px 20px rgba(20,30,45,.06);
+    --mono:ui-monospace,"SF Mono",'Cascadia Mono','Roboto Mono',Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f141a; --card:#181f28; --card2:#1f2833; --ink:#e7edf3; --muted:#95a3b1;
+      --line:#2a333e; --accent:#2dd4bf; --accent-ink:#06231f;
+      --prot:#e8697a; --carb:#e6ac4d; --fat:#8fa2df;
+      --good:#5cb562; --warn:#d6a24a; --over:#e0655b; --readout:#7ff0e2;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f6f8; --card:#ffffff; --card2:#eef1f5; --ink:#182029; --muted:#5b6774;
+    --line:#dde3ea; --accent:#0f766e; --accent-ink:#ffffff;
+    --prot:#d1495b; --carb:#d9962f; --fat:#6a7fc4;
+    --good:#3f8f45; --warn:#c1852a; --over:#c0453b; --readout:#0d5c55;
+    --shadow:0 1px 2px rgba(20,30,45,.06),0 6px 20px rgba(20,30,45,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f141a; --card:#181f28; --card2:#1f2833; --ink:#e7edf3; --muted:#95a3b1;
+    --line:#2a333e; --accent:#2dd4bf; --accent-ink:#06231f;
+    --prot:#e8697a; --carb:#e6ac4d; --fat:#8fa2df;
+    --good:#5cb562; --warn:#d6a24a; --over:#e0655b; --readout:#7ff0e2;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{max-width:720px;margin:0 auto;padding:26px 18px 60px;color:var(--ink);
+    font-family:var(--sans);line-height:1.5;background:var(--bg);min-height:100vh}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;margin:0 0 6px}
+  h1{font-size:clamp(24px,5vw,32px);line-height:1.1;margin:0 0 8px;font-weight:800;
+    letter-spacing:-.02em;text-wrap:balance}
+  .lede{color:var(--muted);margin:0 0 22px;font-size:15px;max-width:60ch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
+  .card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    margin:0 0 14px;font-weight:700}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  @media(max-width:460px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12.5px;font-weight:600;color:var(--muted)}
+  input[type=number],select{font:inherit;font-size:15px;padding:9px 11px;border-radius:9px;
+    border:1px solid var(--line);background:var(--card2);color:var(--ink);width:100%;
+    -webkit-appearance:none;appearance:none}
+  input[type=number]:focus,select[type],select:focus{outline:2px solid var(--accent);outline-offset:1px}
+  select{background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+    background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;font:inherit;font-weight:600;font-size:14px;padding:9px 6px;border-radius:9px;
+    border:1px solid var(--line);background:var(--card2);color:var(--muted);cursor:pointer;transition:.12s}
+  .seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .check{display:flex;align-items:center;gap:9px;margin-top:4px;cursor:pointer;font-size:14px;font-weight:600}
+  .check input{width:20px;height:20px;accent-color:var(--accent)}
+  .full{grid-column:1/-1}
+
+  /* readout */
+  .readout{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .kcal{font-family:var(--mono);font-size:clamp(34px,9vw,46px);font-weight:700;
+    color:var(--readout);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1}
+  .kcal small{font-size:14px;color:var(--muted);font-weight:500;margin-left:4px;font-family:var(--sans)}
+  .sub{font-size:13px;color:var(--muted)}
+  .sub b{color:var(--ink);font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .macros{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .macro{border-radius:11px;padding:11px 12px;border:1px solid var(--line);background:var(--card2)}
+  .macro .lab{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .macro .g{font-family:var(--mono);font-size:22px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+  .macro .pk{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .lc{color:var(--prot)} .cc{color:var(--carb)} .fc{color:var(--fat)}
+
+  /* meals */
+  .meal{border:1px solid var(--line);border-radius:12px;margin-bottom:11px;overflow:hidden}
+  .meal summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;justify-content:space-between;
+    align-items:center;gap:10px;background:var(--card2)}
+  .meal summary::-webkit-details-marker{display:none}
+  .meal .mname{font-weight:700;font-size:14.5px}
+  .meal .mmeta{font-size:12px;color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+  .meal table{width:100%;border-collapse:collapse;font-size:14px}
+  .meal td{padding:8px 14px;border-top:1px solid var(--line)}
+  .meal td.g{text-align:right;font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .leu{font-size:11px;color:var(--muted)}
+  .chev{color:var(--muted);transition:.15s;flex-shrink:0}
+  .meal[open] .chev{transform:rotate(90deg)}
+
+  /* micro bars */
+  .micro{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+  .micro:first-child{border-top:none}
+  .micro .mn{flex:0 0 40%;font-weight:600}
+  .micro .bar{flex:1;height:7px;border-radius:4px;background:var(--card2);overflow:hidden}
+  .micro .bar i{display:block;height:100%;border-radius:4px}
+  .micro .pv{flex:0 0 74px;text-align:right;font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* shopping */
+  .shead{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--accent);
+    margin:16px 0 7px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .shead:first-child{margin-top:0}
+  .sitem{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:14.5px;border-bottom:1px dashed var(--line)}
+  .sitem .q{font-family:var(--mono);font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sitem .nt{font-size:11.5px;color:var(--muted);display:block;font-weight:400}
+  .note{font-size:12.5px;color:var(--muted);margin-top:10px;padding:10px 12px;background:var(--card2);border-radius:9px;border:1px solid var(--line)}
+  .warnrow{color:var(--warn);font-weight:600}
+  footer{font-size:11.5px;color:var(--muted);margin-top:26px;line-height:1.6}
+  .topbtns{position:fixed;top:12px;right:12px;display:flex;gap:7px;z-index:10}
+  .toggle{background:var(--card);border:1px solid var(--line);color:var(--muted);
+    border-radius:20px;padding:6px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
+  .toggle:hover{color:var(--ink);border-color:var(--accent)}
+  /* range */
+  .rangeRow{display:flex;align-items:center;gap:10px}
+  .rangeRow input[type=range]{flex:1;accent-color:var(--accent);height:22px}
+  .rangeVal{font-family:var(--mono);font-weight:700;font-size:14px;min-width:66px;text-align:right;font-variant-numeric:tabular-nums;color:var(--accent)}
+  .autoTag{font-size:11px;color:var(--muted);font-weight:500}
+  .margin{font-size:11.5px;color:var(--muted);font-family:var(--mono);font-variant-numeric:tabular-nums;margin-top:2px}
+  .shopHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .shopHead #printShop{position:static}
+  .printTitle{display:none;font-weight:800;font-size:18px;margin-bottom:4px;color:var(--ink)}
+  @media print{
+    .topbtns{display:none}.meal{break-inside:avoid}.card{break-inside:avoid;box-shadow:none;border:none}
+    body,.wrap{background:#fff}
+    details.meal[open] table{display:table}
+    #printShop{display:none}
+  }
+  /* Kun indkøbsliste ved print af listen */
+  @media print{
+    body.only-shop .wrap>*:not(#shopCard){display:none}
+    body.only-shop #shopCard{border:none}
+    body.only-shop .printTitle{display:block}
+    body.only-shop .shopHead h2{display:none}
+  }
+</style>
+
+<div class="topbtns">
+  <button class="toggle" id="printBtn" aria-label="Gem eller print planen">⭳ Gem / print</button>
+  <button class="toggle" id="themeBtn" aria-label="Skift lyst/mørkt tema">◐ Tema</button>
+</div>
+<div class="wrap">
+  <p class="eyebrow">Hypertrofi · personlig beregner</p>
+  <h1>Din plan, skaleret til dine tal</h1>
+  <p class="lede">Uanset vægt, højde og mål: indtast dine tal, så beregnes dit kalorie- og makrobehov,
+    og den mikronæring-komplette 5-måltidsplan og ugentlige indkøbsliste skaleres automatisk.</p>
+
+  <div class="card">
+    <h2>Dine tal</h2>
+    <div class="grid">
+      <div class="field full">
+        <label>Køn</label>
+        <div class="seg" id="sex">
+          <button type="button" data-v="m" aria-pressed="true">Mand</button>
+          <button type="button" data-v="f" aria-pressed="false">Kvinde</button>
+        </div>
+      </div>
+      <div class="field"><label for="age">Alder (år)</label><input type="number" id="age" value="32" min="14" max="90"></div>
+      <div class="field"><label for="wt">Vægt (kg)</label><input type="number" id="wt" value="93" min="35" max="200" step="0.5"></div>
+      <div class="field"><label for="ht">Højde (cm)</label><input type="number" id="ht" value="180" min="130" max="220"></div>
+      <div class="field">
+        <label for="act">Aktivitet</label>
+        <select id="act">
+          <option value="1.2">Stillesiddende (lidt/ingen træning)</option>
+          <option value="1.375">Let aktiv (1–3 pas/uge)</option>
+          <option value="1.55" selected>Moderat (3–5 pas/uge)</option>
+          <option value="1.725">Meget aktiv (6–7 pas/uge)</option>
+          <option value="1.9">Ekstremt aktiv (fysisk job + træning)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="goal">Mål</label>
+        <select id="goal">
+          <option value="bulk" selected>Muskelopbygning (overskud)</option>
+          <option value="maint">Vedligehold</option>
+          <option value="cut">Fedttab / vægttab (underskud)</option>
+        </select>
+      </div>
+      <div class="field" id="rateField">
+        <label for="rate">Tempo</label>
+        <select id="rate"></select>
+      </div>
+      <label class="check full"><input type="checkbox" id="enh" checked> Højt protein &amp; volumen (enhanced-kalibrering)</label>
+      <div class="field full">
+        <label for="ppk">Protein pr. kg — <span class="autoTag" id="ppkAuto" role="button" tabindex="0" style="cursor:pointer;text-decoration:underline">auto efter mål</span></label>
+        <div class="rangeRow">
+          <input type="range" id="ppk" min="1.6" max="3.2" step="0.1" value="2.4">
+          <span class="rangeVal" id="ppkVal">2,4 g/kg</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Dine daglige mål</h2>
+    <div class="readout">
+      <div>
+        <div class="kcal" id="kcal">–<small>kcal/dag</small></div>
+        <div class="margin" id="kM"></div>
+      </div>
+      <div class="sub">BMR <b id="bmr">–</b> · vedligehold <b id="tdee">–</b> kcal<br>Forventet vægtændring <b id="wchg">–</b>/uge · leucin ~<b id="leu">–</b> g/dag</div>
+    </div>
+    <div class="macros">
+      <div class="macro"><div class="lab lc"><span class="dot" style="background:var(--prot)"></span>Protein</div><div class="g lc" id="pG">–</div><div class="pk" id="pK">–</div><div class="margin" id="pM"></div></div>
+      <div class="macro"><div class="lab cc"><span class="dot" style="background:var(--carb)"></span>Kulhydrat</div><div class="g cc" id="cG">–</div><div class="pk" id="cK">–</div><div class="margin" id="cM"></div></div>
+      <div class="macro"><div class="lab fc"><span class="dot" style="background:var(--fat)"></span>Fedt</div><div class="g fc" id="fG">–</div><div class="pk" id="fK">–</div><div class="margin" id="fM"></div></div>
+    </div>
+    <div class="note" id="calNote" hidden></div>
+  </div>
+
+  <div class="card">
+    <h2>Dagsplan — skaleret til dig</h2>
+    <div id="meals"></div>
+    <div class="note" id="densNote"></div>
+  </div>
+
+  <div class="card">
+    <h2>Mikronæring — dag vs. mål</h2>
+    <div id="micros"></div>
+    <div class="note" id="microNote"></div>
+  </div>
+
+  <div class="card" id="shopCard">
+    <div class="shopHead">
+      <h2 style="margin:0">Ugentlig indkøbsliste</h2>
+      <button class="toggle" id="printShop" aria-label="Gem eller print indkøbslisten">⭳ Gem / print liste</button>
+    </div>
+    <div class="printTitle" id="printTitle"></div>
+    <div id="shop"></div>
+    <div class="note">Skaleret til 7 dage med proteinrotation (aften: laks 4× + magert oksekød 3×; frokost: kylling).
+      Rund op til praktiske indkøbsstørrelser i butikken. Knappen «Gem / print liste» gemmer listen som PDF på telefon eller sender den til printer.</div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+"use strict";
+// Naeringsvaerdier pr. 100 g (raa/tor). Standard-referencetal (estimater).
+// cat: p=protein q=kulhydrat f=fedt v=gront/frugt(fast) | sec: butiksafdeling
+const DB={
+ egg   :{n:"Æg (hele)",       cat:"p",sec:"mk",kcal:143,P:12.6,C:0.7,F:9.5,fib:0,leu:.086,vitD:2.0,Ca:56,Fe:1.8,Mg:12,Zn:1.3,K:138,Na:142,vitC:0,o3:.10},
+ whites:{n:"Æggehvider",      cat:"p",sec:"mk",kcal:52,P:11,C:.7,F:.2,fib:0,leu:.086,vitD:0,Ca:7,Fe:.1,Mg:11,Zn:.03,K:163,Na:166,vitC:0,o3:0},
+ oats  :{n:"Havregryn",       cat:"q",sec:"ko",kcal:389,P:13.5,C:66,F:6.9,fib:10.1,leu:.075,vitD:0,Ca:54,Fe:4.7,Mg:177,Zn:4.0,K:429,Na:2,vitC:0,o3:.10},
+ granola:{n:"Granola/mysli",  cat:"q",sec:"ko",kcal:450,P:10,C:60,F:16,fib:7,leu:.075,vitD:0,Ca:50,Fe:3,Mg:90,Zn:2,K:300,Na:30,vitC:0,o3:.10},
+ skyr  :{n:"Skyr (mager)",    cat:"p",sec:"mk",kcal:63,P:11,C:4,F:0.2,fib:0,leu:.096,vitD:0,Ca:150,Fe:.1,Mg:11,Zn:.5,K:150,Na:45,vitC:0,o3:0},
+ milk  :{n:"Sødmælk",         cat:"p",sec:"mk",kcal:61,P:3.3,C:4.7,F:3.3,fib:0,leu:.095,vitD:.1,Ca:113,Fe:.03,Mg:10,Zn:.4,K:132,Na:43,vitC:0,o3:0},
+ blue  :{n:"Blåbær",          cat:"v",sec:"fg",kcal:57,P:.7,C:14,F:.3,fib:2.4,leu:.07,vitD:0,Ca:6,Fe:.3,Mg:6,Zn:.2,K:77,Na:1,vitC:9.7,o3:.06},
+ honey :{n:"Honning",         cat:"q",sec:"ko",kcal:304,P:.3,C:82,F:0,fib:.2,leu:.05,vitD:0,Ca:6,Fe:.4,Mg:2,Zn:.2,K:52,Na:4,vitC:.5,o3:0},
+ dates :{n:"Dadler (tørret)", cat:"q",sec:"ko",kcal:282,P:2.5,C:75,F:.4,fib:8,leu:.05,vitD:0,Ca:39,Fe:1,Mg:43,Zn:.4,K:656,Na:2,vitC:0,o3:0},
+ alm   :{n:"Mandler",         cat:"f",sec:"ko",kcal:579,P:21.2,C:21.6,F:49.9,fib:12.5,leu:.075,vitD:0,Ca:269,Fe:3.7,Mg:270,Zn:3.1,K:733,Na:1,vitC:0,o3:.003},
+ pnut  :{n:"Jordnøddesmør",   cat:"f",sec:"ko",kcal:588,P:25,C:20,F:50,fib:6,leu:.075,vitD:0,Ca:43,Fe:1.9,Mg:168,Zn:2.9,K:649,Na:350,vitC:0,o3:.05},
+ avoc  :{n:"Avocado",         cat:"f",sec:"fg",kcal:160,P:2,C:9,F:15,fib:7,leu:.05,vitD:0,Ca:12,Fe:.6,Mg:29,Zn:.6,K:485,Na:7,vitC:10,o3:.11},
+ chick :{n:"Kyllingebryst",   cat:"p",sec:"kf",kcal:120,P:22.5,C:0,F:2.6,fib:0,leu:.075,vitD:.1,Ca:5,Fe:.4,Mg:29,Zn:.8,K:334,Na:63,vitC:0,o3:.03},
+ rice  :{n:"Ris (hvid)",      cat:"q",sec:"ko",kcal:360,P:7,C:79,F:.9,fib:1.3,leu:.085,vitD:0,Ca:10,Fe:.8,Mg:35,Zn:1.1,K:115,Na:1,vitC:0,o3:0},
+ broc  :{n:"Broccoli",        cat:"v",sec:"fg",kcal:34,P:2.8,C:7,F:.4,fib:2.6,leu:.05,vitD:0,Ca:47,Fe:.7,Mg:21,Zn:.4,K:316,Na:33,vitC:89,o3:.02},
+ pep   :{n:"Peberfrugt (rød)",cat:"v",sec:"fg",kcal:31,P:1,C:6,F:.3,fib:2.1,leu:.04,vitD:0,Ca:7,Fe:.4,Mg:12,Zn:.25,K:211,Na:4,vitC:128,o3:0},
+ spin  :{n:"Spinat",          cat:"v",sec:"fg",kcal:23,P:2.9,C:3.6,F:.4,fib:2.2,leu:.06,vitD:0,Ca:99,Fe:2.7,Mg:79,Zn:.5,K:558,Na:79,vitC:28,o3:.14},
+ carr  :{n:"Gulerod",         cat:"v",sec:"fg",kcal:41,P:.9,C:10,F:.2,fib:2.8,leu:.04,vitD:0,Ca:33,Fe:.3,Mg:12,Zn:.24,K:320,Na:69,vitC:5.9,o3:0},
+ cuke  :{n:"Agurk",           cat:"v",sec:"fg",kcal:15,P:.7,C:3.6,F:.1,fib:.5,leu:.04,vitD:0,Ca:16,Fe:.3,Mg:13,Zn:.2,K:147,Na:2,vitC:2.8,o3:0},
+ oil   :{n:"Olivenolie",      cat:"f",sec:"ko",kcal:884,P:0,C:0,F:100,fib:0,leu:0,vitD:0,Ca:1,Fe:.6,Mg:0,Zn:0,K:1,Na:2,vitC:0,o3:.10},
+ whey  :{n:"Valleprotein",    cat:"p",sec:"ts",kcal:380,P:80,C:8,F:6,fib:0,leu:.106,vitD:0,Ca:500,Fe:1.5,Mg:90,Zn:3,K:500,Na:300,vitC:0,o3:0},
+ ban   :{n:"Banan",           cat:"q",sec:"fg",kcal:89,P:1.1,C:23,F:.3,fib:2.6,leu:.07,vitD:0,Ca:5,Fe:.3,Mg:27,Zn:.15,K:358,Na:1,vitC:8.7,o3:.03},
+ rcake :{n:"Riskiks",         cat:"q",sec:"ko",kcal:387,P:8,C:82,F:3,fib:4,leu:.085,vitD:0,Ca:10,Fe:.5,Mg:100,Zn:1.5,K:200,Na:30,vitC:0,o3:0},
+ salm  :{n:"Laks",            cat:"p",sec:"kf",kcal:208,P:20,C:0,F:13.4,fib:0,leu:.085,vitD:11,Ca:9,Fe:.3,Mg:27,Zn:.4,K:363,Na:59,vitC:0,o3:2.3},
+ pot   :{n:"Kartofler",       cat:"q",sec:"fg",kcal:77,P:2,C:17,F:.1,fib:2.2,leu:.06,vitD:0,Ca:12,Fe:.8,Mg:23,Zn:.3,K:425,Na:6,vitC:19.7,o3:0},
+ cott  :{n:"Hytteost (mager)",cat:"p",sec:"mk",kcal:72,P:12,C:3.4,F:1.5,fib:0,leu:.096,vitD:0,Ca:83,Fe:.1,Mg:8,Zn:.4,K:104,Na:330,vitC:0,o3:0},
+ rasp  :{n:"Hindbær",         cat:"v",sec:"fg",kcal:52,P:1.2,C:12,F:.7,fib:6.5,leu:.07,vitD:0,Ca:25,Fe:.7,Mg:22,Zn:.4,K:151,Na:1,vitC:26,o3:.13},
+ beef  :{n:"Magert oksekød 5%",cat:"p",sec:"kf",kcal:137,P:21,C:0,F:5,fib:0,leu:.080,vitD:.2,Ca:5,Fe:2.6,Mg:21,Zn:4.8,K:330,Na:66,vitC:0,o3:.02}
+};
+const SEC_NAME={kf:"Kød & fisk",mk:"Mejeri & køl",fg:"Frugt & grønt",ko:"Kolonial",ts:"Tilskud"};
+const SEC_ORDER=["kf","mk","fg","ko","ts"];
+const SHOPNOTE={chick:"frokost alle dage",salm:"aften · omega-3 + D-vitamin",skyr:"store bøtter",
+ cott:"kasein før søvn",whey:"1 bøtte rækker uger",oil:"rækker længe",oats:"1 pose",rice:"tør vægt",
+ milk:"1 liter rækker",granola:"1 pose",pnut:"1 glas rækker",dates:"pose",avoc:"modne"};
+
+// Tre tætheds-menuer. Beregneren vælger automatisk den, hvis kalorie-tæthed passer
+// bedst til dit mål — så en stor person ikke skal spise enorme mængder af det samme,
+// og en lille person ikke får bittesmå portioner. Derefter finskaleres til dine tal.
+const TEMPLATES={
+ let:[   // kalorie-let, høj volumen (til lave kaloriemål)
+  {name:"Måltid 1 · Morgen",     items:[["whites",200],["egg",100],["oats",50],["skyr",200],["blue",100]]},
+  {name:"Måltid 2 · Frokost",    items:[["chick",180],["rice",70],["avoc",40],["broc",120],["pep",80],["cuke",100],["spin",40],["oil",8]]},
+  {name:"Måltid 3 · Peri-workout",items:[["whey",35],["ban",100]]},
+  {name:"Måltid 4 · Aften",      items:[["salm",150],["pot",220],["broc",120],["carr",100],["cuke",100],["spin",40],["oil",8]]},
+  {name:"Måltid 5 · Før søvn",   items:[["cott",250],["alm",15],["rasp",120],["blue",50]]}
+ ],
+ standard:[  // ~3185 kcal reference
+  {name:"Måltid 1 · Morgen",     items:[["egg",200],["oats",80],["skyr",200],["blue",100],["honey",20]]},
+  {name:"Måltid 2 · Frokost",    items:[["chick",180],["rice",115],["broc",100],["pep",80],["spin",40],["oil",10]]},
+  {name:"Måltid 3 · Peri-workout",items:[["whey",40],["ban",120],["rcake",50]]},
+  {name:"Måltid 4 · Aften",      items:[["salm",170],["pot",320],["broc",100],["carr",100],["spin",40],["oil",5]]},
+  {name:"Måltid 5 · Før søvn",   items:[["cott",250],["alm",25],["rasp",100]]}
+ ],
+ kompakt:[  // kalorie-tæt (til høje kaloriemål) — mere kcal pr. gram, mindre volumen
+  {name:"Måltid 1 · Morgen",     items:[["egg",200],["granola",70],["milk",200],["pnut",25],["blue",80]]},
+  {name:"Måltid 2 · Frokost",    items:[["chick",180],["rice",130],["avoc",70],["pep",60],["spin",40],["oil",12]]},
+  {name:"Måltid 3 · Peri-workout",items:[["whey",40],["ban",120],["dates",45],["pnut",15]]},
+  {name:"Måltid 4 · Aften",      items:[["salm",185],["pot",300],["broc",90],["carr",80],["oil",12]]},
+  {name:"Måltid 5 · Før søvn",   items:[["cott",250],["alm",40],["dates",30]]}
+ ]
+};
+const MICRO_KEYS=[["fib","Fiber","g"],["o3","Omega-3 (EPA+DHA)","g"],["vitD","Vitamin D","µg"],
+ ["Mg","Magnesium","mg"],["Zn","Zink","mg"],["Fe","Jern","mg"],["Ca","Calcium","mg"],
+ ["K","Kalium","mg"],["Na","Natrium","mg"],["vitC","Vitamin C","mg"]];
+const DENS_LABEL={let:"let (høj volumen)",standard:"standard",kompakt:"kompakt (kalorie-tæt)"};
+
+let SEX="m", ppkManual=false;
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value)||0;
+const r0=x=>Math.round(x), r1=x=>Math.round(x*10)/10;
+
+// ---- kategori-basissummer for en given menu (til skalering) ----
+function catSums(meals){
+  const s={p:{P:0,C:0,F:0},q:{P:0,C:0,F:0},f:{P:0,C:0,F:0},v:{P:0,C:0,F:0}};
+  for(const m of meals)for(const[k,g]of m.items){const d=DB[k],ff=g/100;
+    s[d.cat].P+=d.P*ff; s[d.cat].C+=d.C*ff; s[d.cat].F+=d.F*ff;}
+  return s;
+}
+function refKcal(meals){let t=0;for(const m of meals)for(const[k,g]of m.items)t+=DB[k].kcal*g/100;return t;}
+const REF={let:refKcal(TEMPLATES.let),standard:refKcal(TEMPLATES.standard),kompakt:refKcal(TEMPLATES.kompakt)};
+// vælg den menu hvis kalorie-tæthed ligger nærmest målet
+function pickDensity(kcal){
+  let best="standard",bd=1e9;
+  for(const k of ["let","standard","kompakt"]){const d=Math.abs(REF[k]-kcal);if(d<bd){bd=d;best=k;}}
+  return best;
+}
+
+function populateRate(){
+  const goal=$("goal").value, rf=$("rateField"), sel=$("rate");
+  if(goal==="maint"){rf.style.display="none";sel.innerHTML='<option value="1">–</option>';return;}
+  rf.style.display="";
+  const opts=goal==="bulk"
+    ?[["1.08","Forsigtigt overskud"],["1.10","Standard overskud"],["1.16","Aggressivt overskud"]]
+    :[["0.85","Mildt underskud"],["0.80","Moderat underskud"],["0.75","Aggressivt underskud"]];
+  sel.innerHTML=opts.map((o,i)=>`<option value="${o[0]}"${i===1?" selected":""}>${o[1]}</option>`).join("");
+}
+
+function compute(){
+  const age=num("age"),wt=num("wt"),ht=num("ht");
+  const act=parseFloat($("act").value), goal=$("goal").value, enh=$("enh").checked;
+  const rate=parseFloat($("rate").value)||1;
+  // Mifflin-St Jeor
+  const bmr=10*wt+6.25*ht-5*age+(SEX==="m"?5:-161);
+  const tdee=bmr*act;
+  let kcal=tdee*(goal==="maint"?1:rate);
+  // protein g/kg — auto efter maal (hoejere paa underskud) eller manuel override
+  let autoPpk=goal==="cut"?2.4:goal==="maint"?1.9:2.1; if(enh)autoPpk+=0.3;
+  if(!ppkManual)$("ppk").value=autoPpk.toFixed(1);
+  let ppk=parseFloat($("ppk").value)||autoPpk;
+  $("ppkVal").textContent=r1(ppk).toFixed(1).replace(".",",")+" g/kg";
+  $("ppkAuto").textContent=ppkManual?"manuel — klik for auto":"auto efter mål";
+  const wchg=(kcal-tdee)*7/7700; // kg/uge (7700 kcal ~ 1 kg)
+  saveState();
+  let fpk=0.9;
+  let tP=ppk*wt, tF=fpk*wt;
+  let tC=(kcal-4*tP-9*tF)/4;
+  let note="";
+  if(tC<wt*1.0){ // for lidt kulhydrat -> saenk fedt lidt
+    tF=Math.max(0.6*wt,(kcal-4*tP-4*wt*1.0)/9); tC=(kcal-4*tP-9*tF)/4;
+    note="Ved dette mål er kulhydrat presset lavt — fedtet er sænket til minimum for at bevare protein. Overvej et mindre aggressivt underskud.";
+  }
+  if(tC<0){tC=0;note="Kalorierne er for lave til proteinmålet ved denne profil — hæv kalorier eller sænk proteinandelen.";}
+
+  // SMART MENU-VALG: vælg den tætheds-menu hvis reference-kalorier ligger nærmest
+  // dit mål, så skaleringsfaktorerne bliver moderate (ingen enorme/bittesmå portioner).
+  const dens=pickDensity(kcal);
+  const MEALS=TEMPLATES[dens];
+  const CS=catSums(MEALS);
+
+  // iterativ skalering: gront fast (v=1), find faktorer for p/q/f
+  let fp=1,fq=1,ff=1;
+  for(let i=0;i<14;i++){
+    fp=(tP - (fq*CS.q.P + ff*CS.f.P + CS.v.P))/CS.p.P;
+    fq=(tC - (fp*CS.p.C + ff*CS.f.C + CS.v.C))/CS.q.C;
+    ff=(tF - (fp*CS.p.F + fq*CS.q.F + CS.v.F))/CS.f.F;
+    fp=Math.max(.2,Math.min(4,fp)); fq=Math.max(.15,Math.min(5,fq)); ff=Math.max(.1,Math.min(4,ff));
+  }
+  const fac={p:fp,q:fq,f:ff,v:1};
+
+  // byg skaleret plan + summer
+  const tot={kcal:0,P:0,C:0,F:0,leu:0}; MICRO_KEYS.forEach(([k])=>tot[k]=0);
+  const scaled=MEALS.map(m=>{
+    const ms={kcal:0,P:0,C:0,F:0,leu:0},rows=[];
+    for(const[k,g]of m.items){const d=DB[k];let gg=g*fac[d.cat];
+      gg=gg>=100?r0(gg/5)*5:gg>=20?r0(gg):r0(gg); const f=gg/100;
+      ms.kcal+=d.kcal*f;ms.P+=d.P*f;ms.C+=d.C*f;ms.F+=d.F*f;ms.leu+=d.P*f*d.leu;
+      MICRO_KEYS.forEach(([mk])=>tot[mk]+=d[mk]*f);
+      rows.push([k,d.n,gg]);}
+    for(const kk in ms)tot[kk]+=ms[kk];
+    return {name:m.name,rows,ms};
+  });
+
+  render({bmr,tdee,kcal,tP,tC,tF,tot,scaled,note,wt,fac,wchg,goal,dens,MEALS});
+}
+
+function macroPct(g,kcal,per){return Math.round(100*per*g/kcal);}
+
+function render(o){
+  $("kcal").innerHTML=r0(o.tot.kcal)+'<small>kcal/dag</small>';
+  $("bmr").textContent=r0(o.bmr); $("tdee").textContent=r0(o.tdee);
+  $("leu").textContent=r1(o.tot.leu);
+  const wc=o.wchg, wcEl=$("wchg");
+  if(o.goal==="maint"){wcEl.textContent="±0 kg (vedligehold)";wcEl.style.color="var(--muted)";}
+  else{const gain=wc>=0;wcEl.textContent=(gain?"+":"−")+r1(Math.abs(wc))+" kg";
+    wcEl.style.color=gain?"var(--carb)":"var(--good)";}
+  $("pG").textContent=r0(o.tot.P)+" g"; $("pK").textContent=r1(o.tot.P/o.wt)+" g/kg";
+  $("cG").textContent=r0(o.tot.C)+" g"; $("cK").textContent=r1(o.tot.C/o.wt)+" g/kg";
+  $("fG").textContent=r0(o.tot.F)+" g"; $("fK").textContent=r1(o.tot.F/o.wt)+" g/kg";
+  const cn=$("calNote"); if(o.note){cn.hidden=false;cn.textContent=o.note;}else cn.hidden=true;
+  // ±10 % arbejds-vindue (biologisk mål-usikkerhed + daglig variation)
+  const lo=x=>r0(x*0.9), hi=x=>r0(x*1.1);
+  $("kM").textContent="±10 %-vindue: "+lo(o.tot.kcal)+"–"+hi(o.tot.kcal)+" kcal";
+  $("pM").textContent="±10 %: "+lo(o.tot.P)+"–"+hi(o.tot.P)+" g";
+  $("cM").textContent="±10 %: "+lo(o.tot.C)+"–"+hi(o.tot.C)+" g";
+  $("fM").textContent="±10 %: "+lo(o.tot.F)+"–"+hi(o.tot.F)+" g";
+
+  // maaltider
+  $("meals").innerHTML=o.scaled.map((m,i)=>{
+    const rows=m.rows.map(([key,n,g])=>`<tr><td>${n}</td><td class="g">${g} g</td></tr>`).join("");
+    const leuLow=m.ms.leu<2.9?' style="color:var(--warn)"':'';
+    return `<details class="meal"${i===0?' open':''}>
+      <summary><span style="display:flex;align-items:center;gap:8px"><svg class="chev" width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="mname">${m.name}</span></span>
+      <span class="mmeta">${r0(m.ms.kcal)} kcal · ${r0(m.ms.P)}P ${r0(m.ms.C)}K ${r0(m.ms.F)}F<br><span class="leu"${leuLow}>leucin ~${r1(m.ms.leu)} g</span></span></summary>
+      <table><tbody>${rows}</tbody></table></details>`;
+  }).join("");
+  $("densNote").textContent="Automatisk valgt menu: "+DENS_LABEL[o.dens]+". Grøntsager og bær holdes faste (mikronæring skalerer ikke med kropsvægt) — protein-, kulhydrat- og fedtkilder justeres. Tryk på et måltid for at folde det ud.";
+
+  // mikro
+  const sex=SEX;
+  const RDA={fib:sex==="m"?38:28,o3:2.0,vitD:20,Mg:sex==="m"?420:320,Zn:sex==="m"?11:8,
+    Fe:sex==="m"?10:18,Ca:1100,K:sex==="m"?3800:3000,Na:4000,vitC:90};
+  $("micros").innerHTML=MICRO_KEYS.map(([k,label,u])=>{
+    const v=o.tot[k],pct=100*v/RDA[k],w=Math.max(3,Math.min(100,pct));
+    const col=k==="Na"?(pct<60?"var(--warn)":"var(--good)"):(pct>=90?"var(--good)":pct>=60?"var(--warn)":"var(--over)");
+    return `<div class="micro"><span class="mn">${label}</span>
+      <span class="bar"><i style="width:${w}%;background:${col}"></i></span>
+      <span class="pv">${v>=100?r0(v):r1(v)} ${u} · ${r0(pct)}%</span></div>`;
+  }).join("");
+  $("microNote").innerHTML='Natrium står lavt med vilje — der er ikke regnet salt med. <b>Salt maden</b> mod ~3–4 g natrium/dag. På dage uden laks: et D3-tilskud og fiskeolie dækker vitamin D og omega-3. Kreatin 5 g/dag anbefales fast.';
+
+  // indkobsliste (uge) — generisk: summér faktisk brugte gram pr. råvare i den valgte menu
+  const per={};
+  o.scaled.forEach(m=>m.rows.forEach(([key,n,g])=>{per[key]=(per[key]||0)+g;}));
+  const kg=g=>g>=1000?r1(g/1000)+" kg":r0(g)+" g";
+  const bucket={}; SEC_ORDER.forEach(s=>bucket[s]=[]);
+  // proteinrotation til aften: laks 4 dage + magert oksekød 3 dage (kun hvis laks i menuen)
+  let salmHandled=false;
+  if(per.salm){
+    bucket.kf.push(["Laksefilet",kg(per.salm*4),"4 aftener · omega-3 + D-vitamin"]);
+    const beefWk=(per.salm*DB.salm.P/100)/(DB.beef.P/100)*3;
+    bucket.kf.push(["Magert oksekød 5 %",kg(beefWk),"3 aftener · jern, zink, B12"]);
+    salmHandled=true;
+  }
+  for(const key in per){
+    if(key==="salm"&&salmHandled) continue;
+    const d=DB[key], wkg=per[key]*7;
+    let qty;
+    if(key==="egg") qty=Math.round(wkg/55)+" stk";
+    else if(key==="ban") qty=Math.round(wkg/120)+" stk";
+    else if(key==="avoc") qty=Math.round(wkg/150)+" stk";
+    else qty=kg(wkg);
+    bucket[d.sec].push([d.n, qty, SHOPNOTE[key]||""]);
+  }
+  // faste tilføjelser
+  bucket.ko.push(["Salt","efter behag","salt maden ~3–4 g natrium/dag"]);
+  bucket.ts.push(["Kreatin monohydrat","5 g/dag",""]);
+  bucket.ts.push(["D3 + fiskeolie","—","dage uden laks"]);
+  $("shop").innerHTML=SEC_ORDER.filter(s=>bucket[s].length).map(s=>
+    `<div class="shead">${SEC_NAME[s]}</div>`+bucket[s].map(([n,q,nt])=>
+      `<div class="sitem"><span>${n}${nt?`<span class="nt">${nt}</span>`:""}</span><span class="q">${q}</span></div>`).join("")
+  ).join("");
+
+  $("foot").innerHTML="Beregning: Mifflin-St Jeor BMR × aktivitetsfaktor, justeret for mål. Makro fra mål-specifik protein- ("+
+    "og fedt-g/kg, kulhydrat udfylder resten. Mikronæring summeret fra råvarer med standard-referencetal (estimater) — "+
+    "ikke laboratoriemålt på dine konkrete varer. Vægtudvikling over 2–3 uger er facit; juster ±10 %. "+
+    "For den enhanced kontekst er bloodwork og lægelig opfølgning den egentlige sikkerhed. Intet heri er lægelig rådgivning. "+
+    "Bygget af Claude Fable 5.";
+}
+
+// ---- events ----
+$("sex").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  SEX=b.dataset.v;[...$("sex").children].forEach(x=>x.setAttribute("aria-pressed",x===b));compute();});
+["age","wt","ht","act","enh","rate"].forEach(id=>{
+  $(id).addEventListener("input",compute); $(id).addEventListener("change",compute);});
+$("goal").addEventListener("change",()=>{populateRate();compute();});
+// manuel protein
+$("ppk").addEventListener("input",()=>{ppkManual=true;compute();});
+function resetPpk(){ppkManual=false;compute();}
+$("ppkAuto").addEventListener("click",resetPpk);
+$("ppkAuto").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();resetPpk();}});
+// gem/print hele planen
+$("printBtn").addEventListener("click",()=>window.print());
+// gem/print KUN indkøbslisten
+$("printShop").addEventListener("click",()=>{
+  $("printTitle").textContent="Indkøbsliste · 1 uge";
+  document.body.classList.add("only-shop");
+  window.print();
+});
+window.addEventListener("afterprint",()=>document.body.classList.remove("only-shop"));
+
+// tema-toggle
+const root=document.documentElement;
+$("themeBtn").addEventListener("click",()=>{
+  const cur=root.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  root.setAttribute("data-theme",cur==="dark"?"light":"dark"); saveState();
+});
+
+// gem/hent tal i browseren (virker ogsaa paa lokal fil)
+function saveState(){try{localStorage.setItem("hb_state",JSON.stringify({
+  SEX,age:$("age").value,wt:$("wt").value,ht:$("ht").value,act:$("act").value,
+  goal:$("goal").value,rate:$("rate").value,enh:$("enh").checked,
+  ppk:$("ppk").value,ppkManual,theme:root.getAttribute("data-theme")||""}));}catch(e){}}
+function loadState(){try{const s=JSON.parse(localStorage.getItem("hb_state")||"null");if(!s)return null;
+  if(s.SEX){SEX=s.SEX;[...$("sex").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===SEX));}
+  ["age","wt","ht","act","goal","ppk"].forEach(k=>{if(s[k]!=null&&s[k]!=="")$(k).value=s[k];});
+  if(typeof s.enh==="boolean")$("enh").checked=s.enh;
+  if(typeof s.ppkManual==="boolean")ppkManual=s.ppkManual;
+  if(s.theme)root.setAttribute("data-theme",s.theme);
+  return s;}catch(e){return null;}}
+
+const saved=loadState();
+populateRate();
+if(saved&&saved.rate&&[...$("rate").options].some(o=>o.value===saved.rate))$("rate").value=saved.rate;
+compute();
+</script>
