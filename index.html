@@ -123,6 +123,11 @@
   .shopHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
   .shopHead #printShop{position:static}
   .printTitle{display:none;font-weight:800;font-size:18px;margin-bottom:4px;color:var(--ink)}
+  .tabs{display:flex;gap:6px;margin:2px 0 18px;background:var(--card2);padding:5px;border-radius:12px;border:1px solid var(--line)}
+  .tabs button{flex:1;font:inherit;font-weight:700;font-size:14.5px;padding:11px 8px;border-radius:8px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:.12s}
+  .tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-ink)}
+  .exday table td:last-child{text-align:right;font-family:var(--mono);font-weight:600;font-size:12.5px;white-space:nowrap}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--card2);color:var(--accent);border:1px solid var(--line);margin-left:6px}
   @media print{
     .topbtns{display:none}.meal{break-inside:avoid}.card{break-inside:avoid;box-shadow:none;border:none}
     body,.wrap{background:#fff}
@@ -135,6 +140,10 @@
     body.only-shop #shopCard{border:none}
     body.only-shop .printTitle{display:block}
     body.only-shop .shopHead h2{display:none}
+    body.only-trae .wrap>*:not(#paneTrae){display:none}
+    body.only-trae #printTrae{display:none}
+    body.only-trae #traeTitle{display:block}
+    body.only-trae .shopHead h2{display:none}
   }
 </style>
 
@@ -194,6 +203,12 @@
     </div>
   </div>
 
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabKost" aria-selected="true">🍗 Kost &amp; makro</button>
+    <button role="tab" id="tabTrae" aria-selected="false">🏋 Træning</button>
+  </div>
+
+  <section id="paneKost">
   <div class="card">
     <h2>Dine daglige mål</h2>
     <div class="readout">
@@ -233,6 +248,43 @@
     <div class="note">Skaleret til 7 dage med proteinrotation (aften: laks 4× + magert oksekød 3×; frokost: kylling).
       Rund op til praktiske indkøbsstørrelser i butikken. Knappen «Gem / print liste» gemmer listen som PDF på telefon eller sender den til printer.</div>
   </div>
+  </section>
+
+  <section id="paneTrae" hidden>
+  <div class="card">
+    <h2>Din træning</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="exp">Erfaring</label>
+        <select id="exp">
+          <option value="nyb">Nybegynder (0–1 år)</option>
+          <option value="ovet" selected>Øvet (1–3 år)</option>
+          <option value="avan">Avanceret (3+ år)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="days">Dage pr. uge</label>
+        <select id="days"></select>
+      </div>
+    </div>
+    <div class="note" id="traeIntro"></div>
+  </div>
+
+  <div class="card" id="traeCard">
+    <div class="shopHead">
+      <h2 style="margin:0">Ugeplan</h2>
+      <button class="toggle" id="printTrae" aria-label="Gem eller print træningsplanen">⭳ Gem / print plan</button>
+    </div>
+    <div class="printTitle" id="traeTitle"></div>
+    <div id="traeDays"></div>
+    <div class="note" id="traeMeta"></div>
+  </div>
+
+  <div class="card">
+    <h2>Volumen, progression &amp; deload</h2>
+    <div id="traeGuide"></div>
+  </div>
+  </section>
 
   <footer id="foot"></footer>
 </div>
@@ -481,7 +533,95 @@ function render(o){
     "Bygget af Claude Fable 5.";
 }
 
+// ================= TRÆNING =================
+const TR_DAYS={
+ full:["Full-body",[["Squat el. benpres","3 × 6–10 · RIR 2–3"],["Bænkpres el. dips","3 × 6–10 · RIR 2–3"],
+   ["Roning (stang/kabel)","3 × 8–12 · RIR 2"],["Rumænsk dødløft","2 × 8–12 · RIR 2–3"],
+   ["Skulderpres","2 × 8–12 · RIR 2"],["Lat pulldown / pull-up","2 × 8–12 · RIR 2"],
+   ["Sidehævninger","2 × 12–20 · RIR 1"],["Biceps + triceps","2 × 10–15 · RIR 1"]]],
+ oa:["Overkrop A · tryk-fokus",[["Incline bænkpres (dybt stræk)","4 × 6–10 · RIR 1–2"],["Skulderpres","3 × 8–12 · RIR 1–2"],
+   ["Pull-up / lat pulldown","4 × 8–12 · RIR 1–2"],["Brystunderstøttet roning","3 × 10–15 · RIR 0–1"],
+   ["Overhead triceps ext. (fuld stræk)","3 × 10–15 · RIR 0–1"],["Sidehævninger","4 × 12–20 · RIR 0–1"]]],
+ ua:["Underkrop A · squat-fokus",[["Squat (dyb, fuld ROM)","4 × 5–8 · RIR 1–2"],["Rumænsk dødløft","3 × 6–10 · RIR 1–2"],
+   ["Benpres","3 × 10–15 · RIR 1–2"],["Liggende leg curl","4 × 10–15 · RIR 0–1"],
+   ["Stående lægpres (fuld stræk)","4 × 8–12 · RIR 0–1"],["Hængende benløft","3 × 10–15 · RIR 0–1"]]],
+ ob:["Overkrop B · træk-fokus",[["Pull-up m. vægt / pulldown","4 × 6–10 · RIR 1–2"],["Stangroning / DB-roning","4 × 8–12 · RIR 1–2"],
+   ["Incline DB-pres","3 × 8–12 · RIR 1–2"],["Kabel-flyes (stræk)","3 × 12–15 · RIR 0–1"],
+   ["Face pull / bagskulder","4 × 15–20 · RIR 0–1"],["Incline DB-curl (stræk)","3 × 8–12 · RIR 0–1"]]],
+ ub:["Underkrop B · hængsel-fokus",[["Dødløft el. hip thrust","3 × 5–8 · RIR 1–2"],["Bulgarian split squat (dybt stræk)","3 × 8–12 · RIR 1–2"],
+   ["Benextension","4 × 12–20 · RIR 0–1"],["Siddende leg curl","3 × 10–15 · RIR 0–1"],
+   ["Siddende lægpres","4 × 12–20 · RIR 0–1"],["Kabel-crunch (mave)","3 × 12–15 · RIR 0–1"]]],
+ pushA:["Push A · bryst/skuldre/triceps",[["Incline bænkpres (dybt stræk)","4 × 6–10 · RIR 1–2"],["Skulderpres","3 × 8–12 · RIR 1–2"],
+   ["Dips / brystpres-maskine","3 × 8–12 · RIR 1"],["Sidehævninger","4 × 12–20 · RIR 0–1"],
+   ["Overhead triceps ext. (fuld stræk)","3 × 10–15 · RIR 0–1"],["Triceps pushdown","2 × 12–15 · RIR 0–1"]]],
+ pullA:["Pull A · ryg/bagskulder/biceps",[["Pull-up m. vægt / pulldown","4 × 6–10 · RIR 1–2"],["Stangroning","4 × 8–12 · RIR 1–2"],
+   ["Brystunderstøttet roning","3 × 10–15 · RIR 0–1"],["Face pull","3 × 15–20 · RIR 0–1"],
+   ["Incline DB-curl (stræk)","3 × 8–12 · RIR 0–1"],["Hammer-curl","2 × 10–15 · RIR 0–1"]]],
+ pushB:["Push B · skulder/bryst",[["Skulderpres (stående)","4 × 6–10 · RIR 1–2"],["Flad bænkpres","3 × 8–12 · RIR 1–2"],
+   ["Incline DB-pres","3 × 10–15 · RIR 0–1"],["Kabel-flyes (stræk)","3 × 12–15 · RIR 0–1"],
+   ["Sidehævninger","4 × 15–20 · RIR 0–1"],["Triceps overhead (stræk)","3 × 10–15 · RIR 0–1"]]],
+ pullB:["Pull B · bredde/tykkelse",[["Lat pulldown (bredt)","4 × 8–12 · RIR 1–2"],["T-bar / maskinroning","4 × 8–12 · RIR 1–2"],
+   ["Enarms DB-roning","3 × 10–15 · RIR 0–1"],["Bagskulder-flyes","3 × 15–20 · RIR 0–1"],
+   ["Kabel-curl","3 × 10–15 · RIR 0–1"],["Face pull","2 × 15–20 · RIR 0–1"]]]
+};
+const SPLITS={
+ nyb:{3:["Full-body · 3 dage",["full","full","full"],"Samme full-body pas 3×/uge (fx man·ons·fre). Simpel lineær progression — læg vægt/reps på hver uge."]},
+ ovet:{4:["Overkrop/Underkrop · 4 dage",["oa","ua","ob","ub"],"Hver muskel 2×/uge (fx man/tir · tor/fre). Den mest tids-effektive struktur for øvede."],
+       3:["Overkrop/Underkrop rullende · 3 dage",["oa","ua","ob","ub"],"Kør de fire pas i rullende rækkefølge uanset ugedag. Over 2 uger rammer du hvert pas ~1,5×."]},
+ avan:{6:["Push/Pull/Ben × 2 · 6 dage",["pushA","pullA","ua","pushB","pullB","ub"],"Hver muskel 2×/uge, volumen fordelt for kvalitet. Kun for erfarne med god restitution."],
+       5:["Push/Pull/Ben + · 5 dage",["pushA","pullA","ua","pushB","pullB"],"Kør de 5 pas rullende. Læg din svageste muskelgruppe på et ekstra kort ved behov."]}
+};
+const DAYOPTS={nyb:[3],ovet:[4,3],avan:[6,5]};
+function populateDays(){
+  const exp=$("exp").value, sel=$("days"), opts=DAYOPTS[exp];
+  sel.innerHTML=opts.map((d,i)=>`<option value="${d}"${i===0?" selected":""}>${d} dage</option>`).join("");
+}
+function renderTraining(){
+  const exp=$("exp").value; let days=parseInt($("days").value);
+  if(!SPLITS[exp][days]){days=DAYOPTS[exp][0];$("days").value=days;}
+  const [label,dayKeys,note]=SPLITS[exp][days];
+  const enh=$("enh").checked;
+  $("traeTitle").textContent="Træningsplan · "+label;
+  $("traeIntro").innerHTML=`<b>${label}.</b> ${note} Belastning i strakt position, progressiv overload, og 0–2 reps i reserve på de fleste sæt.`;
+  // dage
+  $("traeDays").innerHTML=dayKeys.map((k,i)=>{
+    const [dname,ex]=TR_DAYS[k];
+    const rows=ex.map(([n,p])=>`<tr><td>${n}</td><td>${p}</td></tr>`).join("");
+    return `<details class="meal exday"${i===0?" open":""}>
+      <summary><span style="display:flex;align-items:center;gap:8px"><svg class="chev" width="12" height="12" viewBox="0 0 12 12"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="mname">Dag ${i+1} · ${dname}</span></span>
+      <span class="mmeta">${ex.length} øvelser</span></summary>
+      <table><tbody>${rows}</tbody></table></details>`;
+  }).join("");
+  $("traeMeta").innerHTML=`Frekvens: hver muskel ~2×/uge. ${enh?"Volumen er sat i den høje ende — du restituerer fra mere, men <b>autoregulér</b>: falder ydelsen, træk tilbage.":"Start i den lave ende af volumen og byg op 1–2 sæt pr. muskel hver 2.–3. uge."} DOMS er ikke et mål; kronisk ømhed = underrestitution.`;
+  // guide
+  const hi=exp==="nyb"?0:1;
+  const vol=[["Bryst","8–10","12–18"],["Ryg","10–12","14–20"],["Ben","10–14","14–20"],["Skuldre","8–12","14–20"],["Arme (direkte)","6–8","10–16"]];
+  const volRows=vol.map(r=>`<div class="micro"><span class="mn">${r[0]}</span>
+    <span style="flex:1;text-align:right;font-family:var(--mono);font-size:12.5px;color:${hi===0?'var(--accent)':'var(--muted)'};font-weight:${hi===0?700:400}">${r[1]} sæt</span>
+    <span style="flex:1;text-align:right;font-family:var(--mono);font-size:12.5px;color:${hi===1?'var(--accent)':'var(--muted)'};font-weight:${hi===1?700:400}">${r[2]} sæt</span></div>`).join("");
+  $("traeGuide").innerHTML=`
+    <div style="display:flex;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding-bottom:4px;border-bottom:1px solid var(--line)">
+      <span style="flex:0 0 40%">Muskel · sæt/uge</span><span style="flex:1;text-align:right">Nybegynder</span><span style="flex:1;text-align:right">Øvet/avanc.</span></div>
+    ${volRows}
+    <div class="note"><b>Progressiv overload (dobbelt progression):</b> start i bunden af rep-intervallet ved mål-RIR → læg reps på uge for uge til toppen → øg så vægten og fald tilbage. Notér vægt × reps hver gang; tallet skal trende opad.</div>
+    <div class="note"><b>Deload:</b> hver 4.–8. uge, eller når ydelsen falder to sessioner i træk — kør én uge med halvt volumen eller lavere intensitet. Kør deload før ydelsen falder, ikke efter.</div>
+    <div class="note">Sener og bindevæv indhenter langsommere end musklen og kraften — især enhanced. Varm grundigt op, styr excentrisk fase, undlad ego-load. Intet heri er lægelig rådgivning.</div>`;
+}
+function setTab(name){
+  const kost=name==="kost";
+  $("tabKost").setAttribute("aria-selected",kost); $("tabTrae").setAttribute("aria-selected",!kost);
+  $("paneKost").hidden=!kost; $("paneTrae").hidden=kost;
+  if(!kost) renderTraining();
+  saveState();
+}
+
 // ---- events ----
+$("tabKost").addEventListener("click",()=>setTab("kost"));
+$("tabTrae").addEventListener("click",()=>setTab("trae"));
+$("exp").addEventListener("change",()=>{populateDays();renderTraining();saveState();});
+$("days").addEventListener("change",()=>{renderTraining();saveState();});
+$("printTrae").addEventListener("click",()=>{document.body.classList.add("only-trae");window.print();});
+window.addEventListener("afterprint",()=>document.body.classList.remove("only-trae"));
 $("sex").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
   SEX=b.dataset.v;[...$("sex").children].forEach(x=>x.setAttribute("aria-pressed",x===b));compute();});
 ["age","wt","ht","act","enh","rate"].forEach(id=>{
@@ -513,17 +653,24 @@ $("themeBtn").addEventListener("click",()=>{
 function saveState(){try{localStorage.setItem("hb_state",JSON.stringify({
   SEX,age:$("age").value,wt:$("wt").value,ht:$("ht").value,act:$("act").value,
   goal:$("goal").value,rate:$("rate").value,enh:$("enh").checked,
-  ppk:$("ppk").value,ppkManual,theme:root.getAttribute("data-theme")||""}));}catch(e){}}
+  ppk:$("ppk").value,ppkManual,exp:$("exp").value,days:$("days").value,
+  tab:$("tabTrae").getAttribute("aria-selected")==="true"?"trae":"kost",
+  theme:root.getAttribute("data-theme")||""}));}catch(e){}}
 function loadState(){try{const s=JSON.parse(localStorage.getItem("hb_state")||"null");if(!s)return null;
   if(s.SEX){SEX=s.SEX;[...$("sex").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===SEX));}
-  ["age","wt","ht","act","goal","ppk"].forEach(k=>{if(s[k]!=null&&s[k]!=="")$(k).value=s[k];});
+  ["age","wt","ht","act","goal","ppk","exp"].forEach(k=>{if(s[k]!=null&&s[k]!=="")$(k).value=s[k];});
   if(typeof s.enh==="boolean")$("enh").checked=s.enh;
   if(typeof s.ppkManual==="boolean")ppkManual=s.ppkManual;
   if(s.theme)root.setAttribute("data-theme",s.theme);
   return s;}catch(e){return null;}}
 
+$("enh").addEventListener("change",()=>{if(!$("paneTrae").hidden)renderTraining();});
+
 const saved=loadState();
 populateRate();
 if(saved&&saved.rate&&[...$("rate").options].some(o=>o.value===saved.rate))$("rate").value=saved.rate;
+populateDays();
+if(saved&&saved.days&&[...$("days").options].some(o=>o.value===saved.days))$("days").value=saved.days;
 compute();
+setTab(saved&&saved.tab==="trae"?"trae":"kost");
 </script>
